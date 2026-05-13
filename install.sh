@@ -65,34 +65,52 @@ echo -e "${GREEN}✓ npm $NPM_VERSION${NC}"
 INSTALL_DIR="$HOME/.astracode"
 echo -e "${BLUE}📁 Установка в: $INSTALL_DIR${NC}"
 
+# Удаляем старую директорию если есть
+if [ -d "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}⚠️  Удаляю старую версию...${NC}"
+    rm -rf "$INSTALL_DIR"
+fi
+
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Клонируем репозиторий (если есть remote URL) или копируем локально
-if [ -n "https://github.com/ASTRACAT2022/ASTRACODE" ]; then
-    echo -e "${BLUE}🔄 Клонирую репозиторий...${NC}"
-    git clone "$ASTRACODE_REPO" repo 2>/dev/null || {
-        echo -e "${YELLOW}⚠️  Не удалось клонировать, использую локальную версию${NC}"
-        cp -r /workspace/* repo/
-    }
+# Клонируем репозиторий
+REPO_URL="https://github.com/ASTRACAT2022/ASTRACODE.git"
+echo -e "${BLUE}🔄 Клонирую репозиторий...${NC}"
+echo -e "${YELLOW}URL: $REPO_URL${NC}"
+
+if git clone "$REPO_URL" repo 2>/dev/null; then
+    echo -e "${GREEN}✓ Репозиторий успешно склонирован${NC}"
 else
-    # Копируем из workspace
-    echo -e "${BLUE}📦 Копирую файлы проекта...${NC}"
-    cp -r /workspace/* repo/ 2>/dev/null || {
-        echo -e "${RED}❌ Ошибка копирования файлов${NC}"
-        exit 1
-    }
+    echo -e "${RED}❌ Не удалось клонировать репозиторий${NC}"
+    echo -e "${YELLOW}Проверьте:${NC}"
+    echo "  1. Доступ к GitHub"
+    echo "  2. Правильность URL репозитория"
+    echo "  3. Наличие git (проверьте: git --version)"
+    exit 1
 fi
 
 cd repo
+
+# Проверяем наличие package.json
+if [ ! -f "package.json" ]; then
+    echo -e "${RED}❌ package.json не найден в репозитории${NC}"
+    echo -e "${YELLOW}Содержимое директории:${NC}"
+    ls -la
+    exit 1
+fi
 
 # Установка зависимостей
 echo -e "${BLUE}📦 Установка зависимостей...${NC}"
 npm install --silent
 
-# Сборка проекта
-echo -e "${BLUE}🔨 Сборка проекта...${NC}"
-npm run build --silent
+# Проверяем наличие скрипта build
+if grep -q '"build"' package.json; then
+    echo -e "${BLUE}🔨 Сборка проекта...${NC}"
+    npm run build --silent
+else
+    echo -e "${YELLOW}⚠️  Скрипт build не найден, пропускаем сборку${NC}"
+fi
 
 # Создание глобальной команды
 echo -e "${BLUE}🔗 Создание глобальной команды 'astracode'...${NC}"
@@ -132,13 +150,29 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
     fi
 fi
 
+# Определяем точку входа
+if [ -f "dist/agent.js" ]; then
+    ENTRY_POINT="dist/agent.js"
+elif [ -f "index.js" ]; then
+    ENTRY_POINT="index.js"
+elif [ -f "src/index.js" ]; then
+    ENTRY_POINT="src/index.js"
+else
+    echo -e "${RED}❌ Не найден файл точки входа${NC}"
+    echo -e "${YELLOW}Поиск .js файлов:${NC}"
+    find . -maxdepth 2 -name "*.js" -type f | head -10
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Точка входа: $ENTRY_POINT${NC}"
+
 # Создаем исполняемый скрипт
-cat > "$BIN_DIR/astracode" << 'SCRIPT'
+cat > "$BIN_DIR/astracode" << EOF
 #!/bin/bash
-INSTALL_DIR="$HOME/.astracode/repo"
-cd "$INSTALL_DIR"
-exec node dist/agent.js "$@"
-SCRIPT
+INSTALL_DIR="$INSTALL_DIR/repo"
+cd "\$INSTALL_DIR"
+exec node $ENTRY_POINT "\$@"
+EOF
 
 chmod +x "$BIN_DIR/astracode"
 
@@ -151,16 +185,6 @@ echo -e "${CYAN}║  ✨ ASTRACODE успешно установлен!         
 echo -e "${CYAN}╚════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${GREEN}🚀 Запуск:${NC}   ${YELLOW}astracode${NC}"
-echo ""
-echo -e "${BLUE}📚 Быстрые команды:${NC}"
-echo -e "   ${YELLOW}/help${NC}     - показать все команды"
-echo -e "   ${YELLOW}/brave on${NC} - автономный режим"
-echo -e "   ${YELLOW}/stats${NC}    - статистика токенов"
-echo ""
-echo -e "${BLUE}🎯 Hotkeys:${NC}"
-echo -e "   ${YELLOW}1-4${NC}       - переключение вкладок"
-echo -e "   ${YELLOW}Esc${NC}       - режим чата"
-echo -e "   ${YELLOW}q${NC}         - выход"
 echo ""
 
 # Предложение запустить сразу
