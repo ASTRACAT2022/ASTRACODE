@@ -69,7 +69,7 @@ mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
 # Клонируем репозиторий (если есть remote URL) или копируем локально
-if [ -n "$ASTRACODE_REPO" ]; then
+if [ -n "https://github.com/ASTRACAT2022/ASTRACODE" ]; then
     echo -e "${BLUE}🔄 Клонирую репозиторий...${NC}"
     git clone "$ASTRACODE_REPO" repo 2>/dev/null || {
         echo -e "${YELLOW}⚠️  Не удалось клонировать, использую локальную версию${NC}"
