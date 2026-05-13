@@ -14,7 +14,7 @@ $ astracode
 ### macOS и Linux (одна команда)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/astracode/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ASTRACAT2022/ASTRACODE/refs/heads/main/install.sh | bash
 ```
 
 Или если уже скачали репозиторий:
